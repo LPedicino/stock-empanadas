@@ -70,11 +70,10 @@
             border: 1px solid #ccc;
             border-radius: 4px;
         }
-        /* Pantalla de bloqueo / login */
         #auth-screen {
             text-align: center;
         }
-        #auth-screen input[type="password"] {
+        #auth-screen input {
             width: 80%;
             padding: 10px;
             font-size: 16px;
@@ -96,6 +95,15 @@
         #app-content {
             display: none;
         }
+        .logout-container {
+            text-align: right;
+            margin-bottom: 15px;
+        }
+        .btn-logout {
+            background-color: #6c757d;
+            font-size: 12px;
+            padding: 5px 10px;
+        }
     </style>
 </head>
 <body>
@@ -104,15 +112,18 @@
         <!-- Pantalla de Autenticación -->
         <div id="auth-screen">
             <h2>Acceso Restringido</h2>
-            <p style="color: #666; font-size: 14px; margin-bottom: 20px;">Ingrese la clave de acceso para ver y modificar el stock.</p>
-            <input type="password" id="access-password" placeholder="Contraseña">
-            <br>
-            <button onclick="verificarClave()">Ingresar</button>
-            <div id="error-message" class="error-msg">Contraseña incorrecta</div>
+            <p style="color: #666; font-size: 14px; margin-bottom: 20px;">Ingrese sus credenciales de administración.</p>
+            <input type="email" id="auth-email" placeholder="Correo electrónico"><br>
+            <input type="password" id="auth-password" placeholder="Contraseña"><br>
+            <button onclick="iniciarSesion()">Ingresar</button>
+            <div id="error-message" class="error-msg">Credenciales incorrectas</div>
         </div>
 
-        <!-- Panel de Stock (Oculto hasta autenticarse) -->
+        <!-- Panel de Stock -->
         <div id="app-content">
+            <div class="logout-container">
+                <button class="btn-logout" onclick="cerrarSesion()">Cerrar Sesión</button>
+            </div>
             <h2>Control de Stock de Empanadas</h2>
             <div id="stock-list">
                 <!-- Se carga dinámicamente -->
@@ -121,24 +132,32 @@
     </div>
 
     <script>
-        // CONFIGURACIÓN DE SUPABASE (Reemplazá con tus datos reales)
         const SUPABASE_URL = 'https://ixoqvlcjfrechpcrcwsq.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_CBrkj8wJgFEfXDu2o0_zLQ_ZJ82urbE';
         
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // CONTRASEÑA MAESTRA (Cámbiala por la que prefieras para vos y tu pareja)
-        const CLAVE_SECRETA = "empanadas2026"; 
+        async function iniciarSesion() {
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
 
-        function verificarClave() {
-            const passInput = document.getElementById('access-password').value;
-            if (passInput === CLAVE_SECRETA) {
-                // Guardamos en la sesión para que no la pida a cada rato mientras navegan
-                sessionStorage.setItem('auth_empanadas', 'true');
-                mostrarApp();
-            } else {
+            const { data, error } = await supabaseClient.auth.signInWithPassword({
+                email: email,
+                password: password
+            });
+
+            if (error) {
                 document.getElementById('error-message').style.display = 'block';
+                console.error(error);
+            } else {
+                document.getElementById('error-message').style.display = 'none';
+                mostrarApp();
             }
+        }
+
+        async function cerrarSesion() {
+            await supabaseClient.auth.signOut();
+            location.reload();
         }
 
         function mostrarApp() {
@@ -147,9 +166,10 @@
             cargarStock();
         }
 
-        // Si ya ingresó antes en esta misma pestaña, entra directo
-        window.onload = function() {
-            if (sessionStorage.getItem('auth_empanadas') === 'true') {
+        // Verificar si ya hay una sesión activa al cargar la página
+        window.onload = async function() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session) {
                 mostrarApp();
             }
         };
@@ -183,21 +203,21 @@
             });
         }
 
-    async function actualizarStock(id, nuevaCantidad) {
-        if (nuevaCantidad < 0) nuevaCantidad = 0;
+        async function actualizarStock(id, nuevaCantidad) {
+            if (nuevaCantidad < 0) nuevaCantidad = 0;
 
-        const { error } = await supabaseClient
-            .from('stock_empanadas')
-            .update({ cantidad: nuevaCantidad })
-            .eq('id', id);
+            const { error } = await supabaseClient
+                .from('stock_empanadas')
+                .update({ cantidad: nuevaCantidad })
+                .eq('id', id);
 
-        if (error) {
-            alert('Error al actualizar el stock');
-            console.error(error);
-        } else {
-            cargarStock();
+            if (error) {
+                alert('Error al actualizar el stock (Permiso denegado)');
+                console.error(error);
+            } else {
+                cargarStock();
+            }
         }
-    }
     </script>
 </body>
 </html>
