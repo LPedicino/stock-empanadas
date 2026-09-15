@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Stock - Empanadas</title>
+    <!-- Incluimos la librería de Supabase desde CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #444;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .item:last-child {
+            border-bottom: none;
+        }
+        .name {
+            font-weight: bold;
+            flex-grow: 1;
+        }
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button.minus {
+            background-color: #dc3545;
+        }
+        button.minus:hover {
+            background-color: #a71d2a;
+        }
+        input[type="number"] {
+            width: 60px;
+            text-align: center;
+            padding: 6px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Control de Stock de Empanadas</h1>
+    <div id="stock-list"> Cargando stock desde Supabase...</div>
+</div>
+
+<script>
+    // Configuración de Supabase (Reemplazá con tus credenciales reales)
+    const SUPABASE_URL = 'https://ixoqvlcjfrechpcrcwsq.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_CBrkj8wJgFEfXDu2o0_zLQ_ZJ82urbE';
+    
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const varieties = [
+        "Árabes",
+        "Criollas Saladas",
+        "Criollas Dulces",
+        "Jamón y Queso",
+        "Bondiola",
+        "Roast Beef",
+        "Pollo al verdeo"
+    ];
+
+    let stockData = {};
+
+    // Cargar datos iniciales desde Supabase
+    async function fetchStock() {
+        const { data, error } = await _supabase.from('stock_empanadas').select('*');
+        
+        if (error) {
+            console.error('Error al cargar stock:', error);
+            return;
+        }
+
+        stockData = {};
+        data.forEach(row => {
+            stockData[row.nombre] = row.cantidad;
+        });
+
+        // Si alguna variedad no está creada en la tabla, la inicializamos en 0
+        varieties.forEach(variety => {
+            if (stockData[variety] === undefined) {
+                stockData[variety] = 0;
+                // Opcional: insertamos la variedad faltante en la BD
+                _supabase.from('stock_empanadas').insert([{ nombre: variety, cantidad: 0 }]).then();
+            }
+        });
+
+        render();
+    }
+
+    async function updateStock(variety, change) {
+        const currentVal = stockData[variety] || 0;
+        const newVal = Math.max(0, currentVal + change);
+        stockData[variety] = newVal;
+        
+        render(); // Actualizamos UI al instante
+
+        // Actualizamos en Supabase
+        const { error } = await _supabase
+            .from('stock_empanadas')
+            .update({ cantidad: newVal })
+            .eq('nombre', variety);
+
+        if (error) {
+            console.error('Error al actualizar:', error);
+        }
+    }
+
+    async function setStock(variety, value) {
+        const parsed = parseInt(value, 10);
+        const newVal = isNaN(parsed) ? 0 : Math.max(0, parsed);
+        stockData[variety] = newVal;
+
+        // Actualizamos en Supabase
+        const { error } = await _supabase
+            .from('stock_empanadas')
+            .update({ cantidad: newVal })
+            .eq('nombre', variety);
+
+        if (error) {
+            console.error('Error al definir stock:', error);
+        }
+    }
+
+    function render() {
+        const listContainer = document.getElementById('stock-list');
+        listContainer.innerHTML = '';
+
+        varieties.forEach(variety => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'item';
+
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'name';
+            nameSpan.textContent = variety;
+
+            const controlsDiv = document.createElement('div');
+            controlsDiv.className = 'controls';
+
+            const btnMinus = document.createElement('button');
+            btnMinus.textContent = '-';
+            btnMinus.className = 'minus';
+            btnMinus.onclick = () => updateStock(variety, -1);
+
+            const inputNum = document.createElement('input');
+            inputNum.type = 'number';
+            inputNum.min = '0';
+            inputNum.value = stockData[variety] !== undefined ? stockData[variety] : 0;
+            inputNum.onchange = (e) => setStock(variety, e.target.value);
+
+            const btnPlus = document.createElement('button');
+            btnPlus.textContent = '+';
+            btnPlus.onclick = () => updateStock(variety, 1);
+
+            controlsDiv.appendChild(btnMinus);
+            controlsDiv.appendChild(inputNum);
+            controlsDiv.appendChild(btnPlus);
+
+            itemDiv.appendChild(nameSpan);
+            itemDiv.appendChild(controlsDiv);
+
+            listContainer.appendChild(itemDiv);
+        });
+    }
+
+    // Inicializar app trayendo los datos
+    fetchStock();
+</script>
+
+</body>
+</html>
