@@ -3,106 +3,271 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Control de Stock de Empanadas</title>
+    <title>Control de Stock | Artesanal</title>
     <!-- Supabase CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Google Fonts: Inter y Playfair Display para un toque rústico/gourmet -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg-kitchen: #f4efe6; /* Tono lino / papel pergamino suave */
+            --card-bg: #ffffff;
+            --text-main: #2c241d;
+            --text-muted: #786e65;
+            --accent: #b45309; /* Tono madera / dorado tostado */
+            --accent-hover: #92400e;
+            --border-kitchen: #e6dfd3;
+            --danger: #b91c1c;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f9;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-kitchen);
+            /* Patrón sutil de líneas estilo libreta de recetas de cocina */
+            background-image: linear-gradient(90deg, transparent 79px, rgba(180, 83, 9, 0.04) 79px, rgba(180, 83, 9, 0.04) 81px, transparent 81px),
+                              linear-gradient(#f4efe6 0.9em, rgba(0,0,0,0.03) 0.9em);
+            background-size: 100% 1.2em;
+            color: var(--text-main);
             margin: 0;
-            padding: 20px;
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            padding: 20px;
         }
+
         .container {
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            background: var(--card-bg);
+            border: 2px solid var(--border-kitchen);
+            padding: 35px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(44, 36, 29, 0.08);
             width: 100%;
-            max-width: 450px;
+            max-width: 500px;
+            box-sizing: border-box;
+            position: relative;
         }
-        h2 {
-            text-align: center;
-            color: #333;
-            margin-bottom: 25px;
+
+        /* Detalle visual superior tipo "etiqueta de frasco / cocina" */
+        .container::before {
+            content: "🍳 COCINA & PRODUCCIÓN";
+            position: absolute;
+            top: -14px;
+            left: 30px;
+            background: var(--accent);
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            padding: 4px 12px;
+            border-radius: 4px;
         }
-        .item {
+
+        .header-app {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-bottom: 25px;
+            border-bottom: 2px solid var(--border-kitchen);
+            padding-bottom: 15px;
+            margin-top: 5px;
+        }
+
+        h2 {
+            font-family: 'Playfair Display', serif;
+            margin: 0;
+            font-size: 1.5rem;
+            color: var(--text-main);
+        }
+
+        .subtitle {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 2px;
+        }
+
+        /* Pantalla de Login */
+        #auth-screen {
+            text-align: center;
+            padding: 10px 0;
+        }
+
+        #auth-screen h2 {
+            font-size: 1.6rem;
+            margin-bottom: 8px;
+        }
+
+        #auth-screen p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 25px;
+        }
+
+        .input-group {
+            text-align: left;
             margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #eee;
         }
+
+        .input-group label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        input[type="email"], input[type="password"] {
+            width: 100%;
+            padding: 12px 14px;
+            background: #faf8f5;
+            border: 1px solid var(--border-kitchen);
+            border-radius: 8px;
+            color: var(--text-main);
+            font-size: 1rem;
+            box-sizing: border-box;
+            transition: all 0.2s;
+        }
+
+        input[type="email"]:focus, input[type="password"]:focus {
+            outline: none;
+            border-color: var(--accent);
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(180, 83, 9, 0.1);
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: 10px;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .error-msg {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: var(--danger);
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            margin-top: 15px;
+            display: none;
+        }
+
+        /* Panel de Stock */
+        #app-content {
+            display: none;
+        }
+
+        .stock-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .item {
+            background: #faf8f5;
+            border: 1px solid var(--border-kitchen);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .item:hover {
+            border-color: var(--accent);
+            background: #fff;
+        }
+
         .item span {
-            font-weight: bold;
-            color: #444;
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
+
         .controls {
             display: flex;
             align-items: center;
             gap: 10px;
         }
-        button {
-            background-color: #007bff;
-            color: white;
+
+        button.btn-qty {
+            background-color: #e6dfd3;
+            color: var(--text-main);
             border: none;
-            padding: 8px 12px;
-            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
             cursor: pointer;
             font-size: 16px;
+            font-weight: bold;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.2s;
         }
-        button:hover {
-            opacity: 0.9;
+
+        button.btn-qty:hover {
+            background-color: var(--accent);
+            color: white;
         }
-        button.btn-minus {
-            background-color: #dc3545;
+
+        button.btn-minus:hover {
+            background-color: var(--danger);
+            color: white;
         }
+
         input[type="number"] {
-            width: 50px;
+            width: 48px;
+            background: #ffffff;
+            border: 1px solid var(--border-kitchen);
+            color: var(--text-main);
             text-align: center;
-            font-size: 16px;
-            padding: 5px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: 600;
+            padding: 6px;
+            border-radius: 6px;
         }
-        #auth-screen {
-            text-align: center;
+
+        input[type="number"]::-webkit-inner-spin-button, 
+        input[type="number"]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
         }
-        #auth-screen input {
-            width: 80%;
-            padding: 10px;
-            font-size: 16px;
-            margin-bottom: 15px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        #auth-screen button {
-            width: 85%;
-            padding: 10px;
-            background-color: #28a745;
-        }
-        .error-msg {
-            color: #dc3545;
-            font-size: 14px;
-            margin-top: 10px;
-            display: none;
-        }
-        #app-content {
-            display: none;
-        }
-        .logout-container {
-            text-align: right;
-            margin-bottom: 15px;
-        }
+
         .btn-logout {
-            background-color: #6c757d;
-            font-size: 12px;
-            padding: 5px 10px;
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border-kitchen);
+            font-size: 0.75rem;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-logout:hover {
+            background: var(--danger);
+            border-color: var(--danger);
+            color: white;
         }
     </style>
 </head>
@@ -111,21 +276,35 @@
     <div class="container">
         <!-- Pantalla de Autenticación -->
         <div id="auth-screen">
-            <h2>Acceso Restringido</h2>
-            <p style="color: #666; font-size: 14px; margin-bottom: 20px;">Ingrese sus credenciales de administración.</p>
-            <input type="email" id="auth-email" placeholder="Correo electrónico"><br>
-            <input type="password" id="auth-password" placeholder="Contraseña"><br>
-            <button onclick="iniciarSesion()">Ingresar</button>
-            <div id="error-message" class="error-msg">Credenciales incorrectas</div>
+            <div class="subtitle">Panel de Control</div>
+            <h2>Acceso de Cocina</h2>
+            <p>Ingrese sus credenciales para continuar.</p>
+            
+            <div class="input-group">
+                <label>Correo electrónico</label>
+                <input type="email" id="auth-email" placeholder="example@any.com">
+            </div>
+            
+            <div class="input-group">
+                <label>Contraseña</label>
+                <input type="password" id="auth-password" placeholder="••••••••">
+            </div>
+
+            <button class="btn-primary" onclick="iniciarSesion()">Ingresar</button>
+            <div id="error-message" class="error-msg">Credenciales incorrectas o error de acceso.</div>
         </div>
 
         <!-- Panel de Stock -->
         <div id="app-content">
-            <div class="logout-container">
-                <button class="btn-logout" onclick="cerrarSesion()">Cerrar Sesión</button>
+            <div class="header-app">
+                <div>
+                    <div class="subtitle">Inventario Actual</div>
+                    <h2>Stock de Empanadas</h2>
+                </div>
+                <button class="btn-logout" onclick="cerrarSesion()">Salir</button>
             </div>
-            <h2>Control de Stock de Empanadas</h2>
-            <div id="stock-list">
+            
+            <div class="stock-container" id="stock-list">
                 <!-- Se carga dinámicamente -->
             </div>
         </div>
@@ -155,6 +334,17 @@
             }
         }
 
+        document.getElementById('auth-password').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                iniciarSesion();
+            }
+        });
+        document.getElementById('auth-email').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                iniciarSesion();
+            }
+        });
+
         async function cerrarSesion() {
             await supabaseClient.auth.signOut();
             location.reload();
@@ -166,7 +356,6 @@
             cargarStock();
         }
 
-        // Verificar si ya hay una sesión activa al cargar la página
         window.onload = async function() {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (session) {
@@ -192,11 +381,11 @@
                 const div = document.createElement('div');
                 div.className = 'item';
                 div.innerHTML = `
-                    <span>${item.nombre}</span>
+                    <span>🥟 ${item.nombre}</span>
                     <div class="controls">
-                        <button class="btn-minus" onclick="actualizarStock(${item.id}, ${item.cantidad - 1})">-</button>
+                        <button class="btn-qty btn-minus" onclick="actualizarStock(${item.id}, ${item.cantidad - 1})">-</button>
                         <input type="number" id="qty-${item.id}" value="${item.cantidad}" readonly>
-                        <button onclick="actualizarStock(${item.id}, ${item.cantidad + 1})">+</button>
+                        <button class="btn-qty" onclick="actualizarStock(${item.id}, ${item.cantidad + 1})">+</button>
                     </div>
                 `;
                 container.appendChild(div);
