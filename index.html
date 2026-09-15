@@ -3,206 +3,201 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Control de Stock - Empanadas</title>
-    <!-- Incluimos la librería de Supabase desde CDN -->
+    <title>Control de Stock de Empanadas</title>
+    <!-- Supabase CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
             background-color: #f4f4f9;
-            color: #333;
             margin: 0;
             padding: 20px;
-        }
-        h1 {
-            text-align: center;
-            color: #444;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
         }
         .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background: #fff;
-            padding: 20px;
+            background: white;
+            padding: 30px;
             border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 450px;
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 25px;
         }
         .item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 12px 0;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
             border-bottom: 1px solid #eee;
         }
-        .item:last-child {
-            border-bottom: none;
-        }
-        .name {
+        .item span {
             font-weight: bold;
-            flex-grow: 1;
+            color: #444;
         }
         .controls {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
         }
         button {
             background-color: #007bff;
             color: white;
             border: none;
-            padding: 6px 12px;
+            padding: 8px 12px;
             border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
         }
         button:hover {
-            background-color: #0056b3;
+            opacity: 0.9;
         }
-        button.minus {
+        button.btn-minus {
             background-color: #dc3545;
         }
-        button.minus:hover {
-            background-color: #a71d2a;
-        }
         input[type="number"] {
-            width: 60px;
+            width: 50px;
             text-align: center;
-            padding: 6px;
             font-size: 16px;
+            padding: 5px;
             border: 1px solid #ccc;
             border-radius: 4px;
+        }
+        /* Pantalla de bloqueo / login */
+        #auth-screen {
+            text-align: center;
+        }
+        #auth-screen input[type="password"] {
+            width: 80%;
+            padding: 10px;
+            font-size: 16px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        #auth-screen button {
+            width: 85%;
+            padding: 10px;
+            background-color: #28a745;
+        }
+        .error-msg {
+            color: #dc3545;
+            font-size: 14px;
+            margin-top: 10px;
+            display: none;
+        }
+        #app-content {
+            display: none;
         }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>Control de Stock de Empanadas</h1>
-    <div id="stock-list"> Cargando stock desde Supabase...</div>
-</div>
+    <div class="container">
+        <!-- Pantalla de Autenticación -->
+        <div id="auth-screen">
+            <h2>Acceso Restringido</h2>
+            <p style="color: #666; font-size: 14px; margin-bottom: 20px;">Ingrese la clave de acceso para ver y modificar el stock.</p>
+            <input type="password" id="access-password" placeholder="Contraseña">
+            <br>
+            <button onclick="verificarClave()">Ingresar</button>
+            <div id="error-message" class="error-msg">Contraseña incorrecta</div>
+        </div>
 
-<script>
-    // Configuración de Supabase (Reemplazá con tus credenciales reales)
-    const SUPABASE_URL = 'https://ixoqvlcjfrechpcrcwsq.supabase.co';
-    const SUPABASE_ANON_KEY = 'sb_publishable_CBrkj8wJgFEfXDu2o0_zLQ_ZJ82urbE';
-    
-    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        <!-- Panel de Stock (Oculto hasta autenticarse) -->
+        <div id="app-content">
+            <h2>Control de Stock de Empanadas</h2>
+            <div id="stock-list">
+                <!-- Se carga dinámicamente -->
+            </div>
+        </div>
+    </div>
 
-    const varieties = [
-        "Árabes",
-        "Criollas Saladas",
-        "Criollas Dulces",
-        "Jamón y Queso",
-        "Bondiola",
-        "Roast Beef",
-        "Pollo al verdeo"
-    ];
-
-    let stockData = {};
-
-    // Cargar datos iniciales desde Supabase
-    async function fetchStock() {
-        const { data, error } = await _supabase.from('stock_empanadas').select('*');
+    <script>
+        // CONFIGURACIÓN DE SUPABASE (Reemplazá con tus datos reales)
+        const SUPABASE_URL = 'https://ixoqvlcjfrechpcrcwsq.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_CBrkj8wJgFEfXDu2o0_zLQ_ZJ82urbE';
         
-        if (error) {
-            console.error('Error al cargar stock:', error);
-            return;
-        }
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        stockData = {};
-        data.forEach(row => {
-            stockData[row.nombre] = row.cantidad;
-        });
+        // CONTRASEÑA MAESTRA (Cámbiala por la que prefieras para vos y tu pareja)
+        const CLAVE_SECRETA = "empanadas2026"; 
 
-        // Si alguna variedad no está creada en la tabla, la inicializamos en 0
-        varieties.forEach(variety => {
-            if (stockData[variety] === undefined) {
-                stockData[variety] = 0;
-                // Opcional: insertamos la variedad faltante en la BD
-                _supabase.from('stock_empanadas').insert([{ nombre: variety, cantidad: 0 }]).then();
+        function verificarClave() {
+            const passInput = document.getElementById('access-password').value;
+            if (passInput === CLAVE_SECRETA) {
+                // Guardamos en la sesión para que no la pida a cada rato mientras navegan
+                sessionStorage.setItem('auth_empanadas', 'true');
+                mostrarApp();
+            } else {
+                document.getElementById('error-message').style.display = 'block';
             }
-        });
+        }
 
-        render();
-    }
+        function mostrarApp() {
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('app-content').style.display = 'block';
+            cargarStock();
+        }
 
-    async function updateStock(variety, change) {
-        const currentVal = stockData[variety] || 0;
-        const newVal = Math.max(0, currentVal + change);
-        stockData[variety] = newVal;
-        
-        render(); // Actualizamos UI al instante
+        // Si ya ingresó antes en esta misma pestaña, entra directo
+        window.onload = function() {
+            if (sessionStorage.getItem('auth_empanadas') === 'true') {
+                mostrarApp();
+            }
+        };
 
-        // Actualizamos en Supabase
-        const { error } = await _supabase
+        async function cargarStock() {
+            const { data, error } = await supabaseClient
+                .from('stock_empanadas')
+                .select('*')
+                .order('id', { ascending: true });
+
+            if (error) {
+                console.error("Error al cargar stock:", error);
+                return;
+            }
+
+            const container = document.getElementById('stock-list');
+            container.innerHTML = '';
+
+            data.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'item';
+                div.innerHTML = `
+                    <span>${item.nombre}</span>
+                    <div class="controls">
+                        <button class="btn-minus" onclick="actualizarStock(${item.id}, ${item.cantidad - 1})">-</button>
+                        <input type="number" id="qty-${item.id}" value="${item.cantidad}" readonly>
+                        <button onclick="actualizarStock(${item.id}, ${item.cantidad + 1})">+</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+    async function actualizarStock(id, nuevaCantidad) {
+        if (nuevaCantidad < 0) nuevaCantidad = 0;
+
+        const { error } = await supabaseClient
             .from('stock_empanadas')
-            .update({ cantidad: newVal })
-            .eq('nombre', variety);
+            .update({ cantidad: nuevaCantidad })
+            .eq('id', id);
 
         if (error) {
-            console.error('Error al actualizar:', error);
+            alert('Error al actualizar el stock');
+            console.error(error);
+        } else {
+            cargarStock();
         }
     }
-
-    async function setStock(variety, value) {
-        const parsed = parseInt(value, 10);
-        const newVal = isNaN(parsed) ? 0 : Math.max(0, parsed);
-        stockData[variety] = newVal;
-
-        // Actualizamos en Supabase
-        const { error } = await _supabase
-            .from('stock_empanadas')
-            .update({ cantidad: newVal })
-            .eq('nombre', variety);
-
-        if (error) {
-            console.error('Error al definir stock:', error);
-        }
-    }
-
-    function render() {
-        const listContainer = document.getElementById('stock-list');
-        listContainer.innerHTML = '';
-
-        varieties.forEach(variety => {
-            const itemDiv = document.createElement('div');
-            itemDiv.className = 'item';
-
-            const nameSpan = document.createElement('span');
-            nameSpan.className = 'name';
-            nameSpan.textContent = variety;
-
-            const controlsDiv = document.createElement('div');
-            controlsDiv.className = 'controls';
-
-            const btnMinus = document.createElement('button');
-            btnMinus.textContent = '-';
-            btnMinus.className = 'minus';
-            btnMinus.onclick = () => updateStock(variety, -1);
-
-            const inputNum = document.createElement('input');
-            inputNum.type = 'number';
-            inputNum.min = '0';
-            inputNum.value = stockData[variety] !== undefined ? stockData[variety] : 0;
-            inputNum.onchange = (e) => setStock(variety, e.target.value);
-
-            const btnPlus = document.createElement('button');
-            btnPlus.textContent = '+';
-            btnPlus.onclick = () => updateStock(variety, 1);
-
-            controlsDiv.appendChild(btnMinus);
-            controlsDiv.appendChild(inputNum);
-            controlsDiv.appendChild(btnPlus);
-
-            itemDiv.appendChild(nameSpan);
-            itemDiv.appendChild(controlsDiv);
-
-            listContainer.appendChild(itemDiv);
-        });
-    }
-
-    // Inicializar app trayendo los datos
-    fetchStock();
-</script>
-
+    </script>
 </body>
 </html>
