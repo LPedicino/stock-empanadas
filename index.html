@@ -396,7 +396,7 @@
                     <span>🥟 ${item.nombre}</span>
                     <div class="controls">
                         <button class="btn-qty btn-minus" onclick="actualizarStock(${item.id}, ${item.cantidad - 1})">-</button>
-                        <input type="number" id="qty-${item.id}" value="${item.cantidad}" readonly>
+                        <input type="number" id="qty-${item.id}" value="${item.cantidad}" onchange="actualizarStock(${item.id}, parseInt(this.value))">
                         <button class="btn-qty" onclick="actualizarStock(${item.id}, ${item.cantidad + 1})">+</button>
                     </div>
                 `;
